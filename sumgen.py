@@ -3,13 +3,15 @@ import tkinter as tk
 import random as rand
 import re
 
-population = []
+population = np.zeros(shape=(3, 3))
 WIDTH = 1024
 HEIGHT = 512
 GENE_SIZE = 8
 num_genes = 0
 num_generations = 0
 isInitial = False
+min_value = 16
+win_percentage = .75
 
 
 # '#%02x%02x%02x' % (0, 128, 64)
@@ -35,22 +37,45 @@ def generate_population(canvas_frame: tk.Frame, canvas: tk.Canvas, dim, chromoso
         dh = new_height - old_height
         width = old_width + dw
         height = old_height + dh
+
         if width >= WIDTH:
             canvas.config(width=old_width + dw, scrollregion=(0, 0, width, height))
+        else:
+            canvas.config(width=WIDTH * win_percentage, scrollregion=(0, 0, WIDTH * win_percentage, HEIGHT))
 
-        canvas.config(height=old_height + dh, scrollregion=(0, 0, width, height))
+        if height >= HEIGHT:
+            canvas.config(height=old_height + dh, scrollregion=(0, 0, width, height))
+        else:
+            canvas.config(height=HEIGHT, scrollregion=(0, 0, WIDTH * win_percentage, HEIGHT))
 
-        draw_population(canvas, population)
+        draw_population(canvas, population, 0, 0)
 
 
-def draw_population(canvas: tk.Canvas, pop: np.ndarray):
+def draw_population(canvas: tk.Canvas, pop: np.ndarray, x0, y0):
     global GENE_SIZE
+
+    width = int(WIDTH * win_percentage)
+    height = HEIGHT
+    population_width = pop.shape[1]
+    population_height = pop.shape[0]
+
+    x1 = x0 + pop.shape[1]
+
+    if population_height * GENE_SIZE > height:
+        y1 = y0 + height // GENE_SIZE
+    else:
+        y1 = y0 + population_height
+
     canvas.delete("all")
-    for i, chromozome in enumerate(pop):
-        for j, gene in enumerate(chromozome):
+    for i in range(y0, y1):
+        for j in range(x0, x1):
             canvas.create_rectangle(j * GENE_SIZE, i * GENE_SIZE, j * GENE_SIZE + GENE_SIZE,
                                     i * GENE_SIZE + GENE_SIZE,
-                                    fill='#%02x%02x%02x' % (0, 0, int((255 * pop[i, j]) / 99)))
+                                    fill='#%02x%02x%02x' % (0, 0, int((255 * pop[i - y0, j - x0]) / 99)))
+
+
+def scroll_callback(event: tk.Event):
+    print(event.delta)
 
 
 def fitness(pop: np.ndarray):
@@ -66,11 +91,24 @@ def mutate(chromozome: np.ndarray):
     pass
 
 
+def on_refresh():
+    length = scroll_y.get()[1] - scroll_y.get()[0]
+    y = scroll_y.get()[1] - length
+    k = int(canvas.winfo_reqheight() * y)
+    print(k)
+    draw_population(canvas, population, 0, k // GENE_SIZE)
+
+
+def on_mousemovement(event):
+    global canvas, population, GENE_SIZE
+    k = int(HEIGHT * scroll_y.get()[1]) * GENE_SIZE
+    print(k)
+    draw_population(canvas, population, 0, 64)
+
+
 # init window
 window = tk.Tk()
 window.geometry(str(WIDTH) + "x" + str(HEIGHT))
-
-win_percentage = .75
 
 # canvas frame
 canvas_frame = tk.Frame(window, width=WIDTH * win_percentage, height=HEIGHT)
@@ -122,6 +160,9 @@ btn_generate_population.pack(pady=32)
 
 btn_start_simulation = tk.Button(frame, text="Start simulatie")
 btn_start_simulation.pack(pady=8)
+
+btn_refresh = tk.Button(frame, text="Refresh", command=on_refresh)
+btn_refresh.pack(pady=8)
 
 # frame.pack()
 window.mainloop()
