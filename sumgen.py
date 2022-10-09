@@ -2,6 +2,7 @@ import numpy as np
 import tkinter as tk
 import random as rand
 import re
+import time
 
 population = np.zeros(shape=(3, 3))
 WIDTH = 1024
@@ -12,6 +13,7 @@ num_generations = 0
 isInitial = False
 min_value = 16
 win_percentage = .75
+spd_alg = 1
 
 
 # '#%02x%02x%02x' % (0, 128, 64)
@@ -66,14 +68,15 @@ def draw_population(canvas: tk.Canvas, pop: np.ndarray, x0, y0):
     else:
         y1 = y0 + population_height
 
-    sliced_population = pop[y0:y1+1]
+    sliced_population = pop[y0:y1 + 1]
 
     canvas.delete("all")
     for i in range(y0, y1):
         for j in range(x0, x1):
+            color = '#%02x%02x%02x' % (0, int((255 * sliced_population[i - y0, j - x0]) / 99), 0)
             canvas.create_rectangle(j * GENE_SIZE, i * GENE_SIZE, j * GENE_SIZE + GENE_SIZE,
                                     i * GENE_SIZE + GENE_SIZE,
-                                    fill='#%02x%02x%02x' % (0, 0, int((255 * sliced_population[i - y0, j - x0]) / 99)))
+                                    fill=color)
 
 
 def scroll_callback(event: tk.Event):
@@ -89,8 +92,26 @@ def crossover(parent1, parent2):
     return np.hstack((parent1[0:axis], parent2[axis:]))
 
 
-def mutate(chromozome: np.ndarray):
-    pass
+def mutate(chromosome: np.ndarray):
+    rand_pos1 = rand.randint(0, len(chromosome) - 1)
+    rand_pos2 = rand.randint(0, len(chromosome) - 1)
+    chromosome[rand_pos1], chromosome[rand_pos2] = chromosome[rand_pos2], chromosome[rand_pos1]
+
+
+def select_elitism(pop: np.ndarray):
+    fitness_values = np.sort(fitness(pop))[::-1]
+    selected_chromosomes = np.asarray([x for _, x in sorted(zip(fitness_values, pop))])
+    return selected_chromosomes[:3]
+
+
+def run_algorithm():
+    global num_generations, population
+    num_generations = int(entry_no_generations.get())
+    mutation_probability = float(entry_mutation_probability.get()) / 100
+    generation = 0
+    max_secs = 2
+    execution_speed = max_secs * (1 - float(entry_spd_alg.get()) / 100)
+
 
 
 def on_refresh():
@@ -151,6 +172,11 @@ lb_no_generations.pack(pady=8)
 entry_mutation_probability = tk.Entry(frame)
 entry_mutation_probability.pack()
 
+lb_spd_alg = tk.Label(frame, text="Viteza algoritmului")
+lb_spd_alg.pack(pady=8)
+entry_spd_alg = tk.Entry(frame)
+lb_spd_alg.pack()
+
 # buttons
 btn_generate_population = tk.Button(frame, text="Genereaza populatie", command=lambda: generate_population(
     canvas_frame,
@@ -160,11 +186,14 @@ btn_generate_population = tk.Button(frame, text="Genereaza populatie", command=l
 ))
 btn_generate_population.pack(pady=32)
 
-btn_start_simulation = tk.Button(frame, text="Start simulatie")
+btn_start_simulation = tk.Button(frame, text="Start simulatie", command=run_algorithm)
 btn_start_simulation.pack(pady=8)
 
 btn_refresh = tk.Button(frame, text="Refresh", command=on_refresh)
 btn_refresh.pack(pady=8)
+
+btn_download = tk.Button(frame, text="Descarca statistici", state=tk.DISABLED)
+btn_download.pack(pady=16)
 
 # frame.pack()
 window.mainloop()
