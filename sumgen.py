@@ -66,12 +66,14 @@ def draw_population(canvas: tk.Canvas, pop: np.ndarray, x0, y0):
     else:
         y1 = y0 + population_height
 
+    sliced_population = pop[y0:y1+1]
+
     canvas.delete("all")
     for i in range(y0, y1):
         for j in range(x0, x1):
             canvas.create_rectangle(j * GENE_SIZE, i * GENE_SIZE, j * GENE_SIZE + GENE_SIZE,
                                     i * GENE_SIZE + GENE_SIZE,
-                                    fill='#%02x%02x%02x' % (0, 0, int((255 * pop[i - y0, j - x0]) / 99)))
+                                    fill='#%02x%02x%02x' % (0, 0, int((255 * sliced_population[i - y0, j - x0]) / 99)))
 
 
 def scroll_callback(event: tk.Event):
