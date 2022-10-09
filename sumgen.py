@@ -100,11 +100,11 @@ def mutate(chromosome: np.ndarray):
 
 def select_elitism(pop: np.ndarray):
     fitness_values = np.sort(fitness(pop))[::-1]
-    selected_chromosomes = np.asarray([x for _, x in sorted(zip(fitness_values, pop))])
-    return selected_chromosomes[:3]
+    sorted_population = np.asarray([x for _, x in sorted(zip(fitness_values, pop))])
+    return sorted_population[:3]
 
 
-def run_algorithm():
+def run():
     global num_generations, population
     num_generations = int(entry_no_generations.get())
     mutation_probability = float(entry_mutation_probability.get()) / 100
@@ -112,13 +112,35 @@ def run_algorithm():
     max_secs = 2
     execution_speed = max_secs * (1 - float(entry_spd_alg.get()) / 100)
 
+    while generation < num_generations:
+        # selectie parinti
+        selected_parents = select_elitism(population)
+
+        for i,chromosome in enumerate(selected_parents):
+            for parent in selected_parents:
+                if parent == chromosome:
+                    population = np.delete(population, i)
+
+
+        # incrucisare
+        child1 = crossover(selected_parents[0], selected_parents[1])
+        child2 = crossover(selected_parents[0], selected_parents[2])
+        child3 = crossover(selected_parents[1], selected_parents[2])
+
+        # mutatie
+        children = np.asarray([child1, child2, child3])
+        for child in children:
+            r = rand.uniform(0, 1)
+            if r >= mutation_probability:
+                mutate(child)
+
+        generation += 1
 
 
 def on_refresh():
     length = scroll_y.get()[1] - scroll_y.get()[0]
     y = scroll_y.get()[1] - length
     k = int(canvas.winfo_reqheight() * y)
-    print(k)
     draw_population(canvas, population, 0, k // GENE_SIZE)
 
 
@@ -186,7 +208,7 @@ btn_generate_population = tk.Button(frame, text="Genereaza populatie", command=l
 ))
 btn_generate_population.pack(pady=32)
 
-btn_start_simulation = tk.Button(frame, text="Start simulatie", command=run_algorithm)
+btn_start_simulation = tk.Button(frame, text="Start simulatie", command=run)
 btn_start_simulation.pack(pady=8)
 
 btn_refresh = tk.Button(frame, text="Refresh", command=on_refresh)
