@@ -114,7 +114,7 @@ def init_algorithm():
 
 
 def run():
-    global num_generations, population, btn_start_simulation
+    global num_generations, population, btn_start_simulation, canvas
     num_generations = int(entry_no_generations.get())
     mutation_probability = float(entry_mutation_probability.get()) / 100
     generation = 0
@@ -144,7 +144,23 @@ def run():
         generation += 1
 
     btn_start_simulation.config(state=tk.ACTIVE)
+    max_chromosome = None
+    max_fitness = -9999999
+    all_fitness = fitness(population)
+    max_index = -99999
+    for i, chromosome in enumerate(population):
+        if all_fitness[i] > max_fitness:
+            max_fitness = all_fitness[i]
+            max_chromosome = chromosome
+            max_index = i
 
+    text = str(fitness(population)[0])
+    canvas.create_text((population.shape[1] + len(text)) * GENE_SIZE, max_index * GENE_SIZE, text=text, fill="white")
+
+    for j in range(0, len(max_chromosome)):
+        color = '#%02x%02x%02x' % (int((255 * max_chromosome[j]) / 99), 0, int((255 * max_chromosome[j]) / 99))
+        canvas.create_rectangle(j * GENE_SIZE, max_index * GENE_SIZE, j * GENE_SIZE + GENE_SIZE,
+                                max_index * GENE_SIZE + GENE_SIZE, fill=color)
 
 
 def on_refresh():
@@ -227,5 +243,8 @@ btn_refresh.pack(pady=8)
 btn_download = tk.Button(frame, text="Descarca statistici", state=tk.DISABLED)
 btn_download.pack(pady=16)
 
+
 # frame.pack()
-window.mainloop()
+def init_program():
+    global window
+    window.mainloop()
