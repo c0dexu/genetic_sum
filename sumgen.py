@@ -3,6 +3,7 @@ import tkinter as tk
 import random as rand
 import re
 import time
+import threading
 
 population = np.zeros(shape=(3, 3))
 WIDTH = 1024
@@ -99,29 +100,34 @@ def mutate(chromosome: np.ndarray):
 
 
 def select_elitism(pop: np.ndarray):
-    fitness_values = np.sort(fitness(pop))[::-1]
-    sorted_population = np.asarray([x for _, x in sorted(zip(fitness_values, pop))])
-    return sorted_population[:3]
+    sorted_fitness = np.sort(pop)[::-1]
+    sorted_fitness = sorted_fitness.tolist()
+    sorted_population = pop.tolist()
+    sorted_population = [x for _, x in sorted(zip(sorted_fitness, sorted_population))]
+    return np.asarray(sorted_population), 3
+
+
+def init_algorithm():
+    thread = threading.Thread(target=run)
+    thread.daemon = True
+    thread.start()
 
 
 def run():
-    global num_generations, population
+    global num_generations, population, btn_start_simulation
     num_generations = int(entry_no_generations.get())
     mutation_probability = float(entry_mutation_probability.get()) / 100
     generation = 0
     max_secs = 2
-    execution_speed = max_secs * (1 - float(entry_spd_alg.get()) / 100)
+    # execution_speed = max_secs * (1 - float(entry_spd_alg.get()) / 100)
+    btn_start_simulation.config(state=tk.DISABLED)
 
     while generation < num_generations:
+        print(f"{generation}")
         # selectie parinti
-        selected_parents = select_elitism(population)
-
-        for i,chromosome in enumerate(selected_parents):
-            for parent in selected_parents:
-                if parent == chromosome:
-                    population = np.delete(population, i)
-
-
+        sorted_population, num_elites = select_elitism(population)
+        selected_parents = sorted_population[:num_elites]
+        population = sorted_population[num_elites:]
         # incrucisare
         child1 = crossover(selected_parents[0], selected_parents[1])
         child2 = crossover(selected_parents[0], selected_parents[2])
@@ -131,10 +137,14 @@ def run():
         children = np.asarray([child1, child2, child3])
         for child in children:
             r = rand.uniform(0, 1)
-            if r >= mutation_probability:
+            if r <= mutation_probability:
                 mutate(child)
-
+        population = np.vstack((population, children))
+        on_refresh()
         generation += 1
+
+    btn_start_simulation.config(state=tk.ACTIVE)
+
 
 
 def on_refresh():
@@ -208,7 +218,7 @@ btn_generate_population = tk.Button(frame, text="Genereaza populatie", command=l
 ))
 btn_generate_population.pack(pady=32)
 
-btn_start_simulation = tk.Button(frame, text="Start simulatie", command=run)
+btn_start_simulation = tk.Button(frame, text="Start simulatie", command=init_algorithm)
 btn_start_simulation.pack(pady=8)
 
 btn_refresh = tk.Button(frame, text="Refresh", command=on_refresh)
