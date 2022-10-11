@@ -23,14 +23,9 @@ def validate_number(number):
     return re.match("^[0-9]+$", number)
 
 
-def set_generated_flag():
-    global is_generated
-    is_generated = True
-
-
 def generate_population(canvas_frame: tk.Frame, canvas: tk.Canvas, dim, chromosome_length):
     global population, is_generated, btn_start_simulation, GENE_SIZE, WIDTH, HEIGHT
-    if validate_number(dim) and validate_number(chromosome_length) and not isInitial:
+    if validate_number(dim) and validate_number(chromosome_length):
         population = np.random.uniform(size=(int(dim), int(chromosome_length)), low=0, high=99).astype("int32")
         old_width = canvas.winfo_width()
         old_height = canvas.winfo_height()
@@ -144,17 +139,11 @@ def run():
         generation += 1
 
     btn_start_simulation.config(state=tk.ACTIVE)
-    max_chromosome = None
-    max_fitness = -9999999
-    all_fitness = fitness(population)
-    max_index = -99999
-    for i, chromosome in enumerate(population):
-        if all_fitness[i] > max_fitness:
-            max_fitness = all_fitness[i]
-            max_chromosome = chromosome
-            max_index = i
-
-    text = str(fitness(population)[0])
+    max_index = np.argmax(fitness(population))
+    max_chromosome = population[max_index]
+    print(fitness(population))
+    print(max_index)
+    text = str(fitness(population)[max_index])
     canvas.create_text((population.shape[1] + len(text)) * GENE_SIZE, max_index * GENE_SIZE, text=text, fill="white")
 
     for j in range(0, len(max_chromosome)):
