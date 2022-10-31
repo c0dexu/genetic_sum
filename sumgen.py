@@ -94,7 +94,7 @@ def fitness_chromosome(chromosome: np.ndarray, chromosome_length):
             chromosome_fitness += chromosome[i] * obj_value[i]
 
     return chromosome_fitness
-
+#s
 
 def fitness(pop: np.ndarray, chromosome_length):
     fitness_val = np.zeros(shape=(len(pop),))
