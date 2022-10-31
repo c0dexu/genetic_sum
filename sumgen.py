@@ -3,6 +3,7 @@ import tkinter as tk
 import random as rand
 import re
 import time
+import os
 import threading
 
 population = np.zeros(shape=(3, 3))
@@ -15,7 +16,7 @@ isInitial = False
 min_value = 16
 win_percentage = .75
 spd_alg = 1
-
+instance_name = "knapsack_instances/instances_small"
 
 # '#%02x%02x%02x' % (0, 128, 64)
 
@@ -26,7 +27,9 @@ def validate_number(number):
 def generate_population(canvas_frame: tk.Frame, canvas: tk.Canvas, dim, chromosome_length):
     global population, is_generated, btn_start_simulation, GENE_SIZE, WIDTH, HEIGHT
     if validate_number(dim) and validate_number(chromosome_length):
-        population = np.random.uniform(size=(int(dim), int(chromosome_length)), low=0, high=99).astype("int32")
+        population = np.asarray(
+            [[rand.randint(0, 1) for j in range(0, int(chromosome_length))] for i in range(0, int(dim))])
+        print(population)
         old_width = canvas.winfo_width()
         old_height = canvas.winfo_height()
         new_width = GENE_SIZE * population.shape[1]
@@ -69,7 +72,7 @@ def draw_population(canvas: tk.Canvas, pop: np.ndarray, x0, y0):
     canvas.delete("all")
     for i in range(y0, y1):
         for j in range(x0, x1):
-            color = '#%02x%02x%02x' % (0, int((255 * sliced_population[i - y0, j - x0]) / 99), 0)
+            color = '#%02x%02x%02x' % (0, int((255 * sliced_population[i - y0, j - x0]) / 1), 0)
             canvas.create_rectangle(j * GENE_SIZE, i * GENE_SIZE, j * GENE_SIZE + GENE_SIZE,
                                     i * GENE_SIZE + GENE_SIZE,
                                     fill=color)
@@ -79,14 +82,85 @@ def scroll_callback(event: tk.Event):
     print(event.delta)
 
 
-def fitness(pop: np.ndarray):
-    return np.sum(pop, axis=1)
+def fitness_chromosome(chromosome: np.ndarray, chromosome_length):
+    max_weight, obj_value, weights = init_data()
+    chromosome_weight = 0
+    chromosome_fitness = 0
+    for i in range(0, chromosome_length):
+        chromosome_weight += chromosome[i] * weights[i]
+
+    if chromosome_weight <= max_weight:
+        for i in range(0, chromosome_length):
+            chromosome_fitness += chromosome[i] * obj_value[i]
+
+    return chromosome_fitness
 
 
+def fitness(pop: np.ndarray, chromosome_length):
+    fitness_val = np.zeros(shape=(len(pop),))
+    for i in range(0, len(pop)):
+        fitness_val[i] = fitness_chromosome(pop[i], chromosome_length)
+    return fitness_val
+
+
+def load_data(dir):
+    data = []
+    list_dir = os.listdir(dir)
+    weights = []
+    objects = []
+    no_objects = -1
+    max_weight = -1
+    for file in list_dir:
+        f = open(dir + "/" + file, "r")
+        for line in f:
+            temp = line.split(' = ')
+            if temp[0] == 'no_objects':
+                no_objects = int(temp[1].replace(" ", ""))
+            elif temp[0] == 'max_weight':
+                max_weight = int(temp[1].replace(" ", ""))
+            elif temp[0] == 'weights':
+                temp_list = temp[1].split(" ")
+                weights = []
+                for x in temp_list:
+                    if x.isnumeric():
+                        weights.append(int(x))
+            elif temp[0] == 'objects':
+                temp_list = temp[1].split(" ")
+                objects = []
+                for x in temp_list:
+                    if x.isnumeric():
+                        objects.append(int(x))
+        data.append(
+            {
+                "no_objects": no_objects,
+                "max_weight": max_weight,
+                "weights": weights,
+                "objects": objects
+            }
+        )
+    return data
+
+# data = load_data("knapsack_instances/instances_small")
+
+
+def init_data(fname, index):
+    data:list = load_data(fname)
+    max_weight = data[index]["max_weight"]
+    obj_value = np.asarray(data[index]["objects"])
+    weights = np.asarray(data[index]["weights"])
+    return max_weight, obj_value, weights
+
+
+# 100 epoci, populatie 1000
 def crossover(parent1, parent2):
     axis = rand.randint(1, len(parent1) - 2)
     return np.hstack((parent1[0:axis], parent2[axis:]))
 
+
+# n - nr obiecte
+# greutate maxima
+# greutati [0, max_weight / 2]
+#
 
 def mutate(chromosome: np.ndarray):
     rand_pos1 = rand.randint(0, len(chromosome) - 1)
@@ -95,7 +169,7 @@ def mutate(chromosome: np.ndarray):
 
 
 def select_elitism(pop: np.ndarray):
-    sorted_fitness = np.sort(pop)[::-1]
+    sorted_fitness = np.sort(fitness(pop, pop.shape[1]))[::-1]
     sorted_fitness = sorted_fitness.tolist()
     sorted_population = pop.tolist()
     sorted_population = [x for _, x in sorted(zip(sorted_fitness, sorted_population))]
@@ -139,11 +213,11 @@ def run():
         generation += 1
 
     btn_start_simulation.config(state=tk.ACTIVE)
-    max_index = np.argmax(fitness(population))
+    max_index = np.argmax(fitness(population, population.shape[1]))
     max_chromosome = population[max_index]
-    print(fitness(population))
-    print(max_index)
-    text = str(fitness(population)[max_index])
+
+    print(fitness(population, population.shape[1])[max_index])
+    text = str(fitness(population, population.shape[1])[max_index])
     canvas.create_text((population.shape[1] + len(text)) * GENE_SIZE, max_index * GENE_SIZE, text=text, fill="white")
 
     for j in range(0, len(max_chromosome)):
@@ -221,16 +295,22 @@ btn_generate_population = tk.Button(frame, text="Genereaza populatie", command=l
     entry_dim_population.get(),
     entry_len_chromosome.get()
 ))
-btn_generate_population.pack(pady=32)
+btn_generate_population.pack(pady=16)
 
 btn_start_simulation = tk.Button(frame, text="Start simulatie", command=init_algorithm)
 btn_start_simulation.pack(pady=8)
 
 btn_refresh = tk.Button(frame, text="Refresh", command=on_refresh)
-btn_refresh.pack(pady=8)
+btn_refresh.pack(pady=4)
 
-btn_download = tk.Button(frame, text="Descarca statistici", state=tk.DISABLED)
-btn_download.pack(pady=16)
+btn_small = tk.Button(frame, text="Instanțe mici", state=tk.DISABLED)
+btn_small.pack(pady=4)
+
+btn_medium = tk.Button(frame, text="Instanțe medii", state=tk.DISABLED)
+btn_medium.pack(pady=4)
+
+btn_large = tk.Button(frame, text="Instanțe mari", state=tk.DISABLED)
+btn_large.pack(pady=4)
 
 
 # frame.pack()

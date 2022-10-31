@@ -1,0 +1,4 @@
+no_objects = 10
+max_weight = 200
+weights = [ 38 10 45 10 37 84 87 73 38 39 ]
+objects = [ 88 12 84 21 49 98 58 33 0 39 ]
